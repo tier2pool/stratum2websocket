@@ -19,6 +19,9 @@ type Server interface {
 }
 
 func New(cmd *cobra.Command) Server {
+	if cmd.Flag("debug").Value.String() == "true" {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 	s := &server{
 		cmd:        cmd,
 		httpServer: echo.New(),
@@ -118,6 +121,7 @@ func (s *server) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 		}
 		switch messageType {
 		case websocket.TextMessage:
+			logrus.Debugf("<-- %s", string(data))
 			if _, err := conn.Write(data); err != nil {
 				return err
 			}
@@ -133,6 +137,7 @@ func (s *server) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	for {
 		n, err := conn.Read(buffer)
 		if n > 0 {
+			logrus.Debugf("--> %s", string(buffer[:n]))
 			if err := ws.WriteMessage(websocket.TextMessage, buffer[:n]); err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					return nil

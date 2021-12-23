@@ -37,6 +37,7 @@ func init() {
 		FullTimestamp: true,
 	})
 	serverCmd.Flags().String("token", "", "server access token")
+	serverCmd.Flags().Bool("debug", false, "")
 	serverCmd.Flags().String("listen", "0.0.0.0:443", "")
 	serverCmd.Flags().String("redirect", "", "")
 	serverCmd.Flags().String("ssl-certificate", "", "")
@@ -50,6 +51,7 @@ func init() {
 	if err := serverCmd.MarkFlagRequired("token"); err != nil {
 		logrus.Fatal(err)
 	}
+	clientCmd.Flags().Bool("debug", false, "")
 	clientCmd.Flags().String("server", "", "")
 	clientCmd.Flags().String("pool", "", "")
 	clientCmd.Flags().String("token", "", "")

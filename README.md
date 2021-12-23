@@ -1,5 +1,9 @@
 # Tier2Pool
 
+![GitHub last commit](https://img.shields.io/github/last-commit/tier2pool/tier2pool?style=flat-square)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/tier2pool/tier2pool?style=flat-square)
+![GitHub license](https://img.shields.io/github/license/tier2pool/tier2pool?style=flat-square)
+
 A mining pool proxy tool.
 
 ## Build
@@ -14,13 +18,15 @@ make build
 
 - Server
 
-```sh
+```bash
 ./tier2pool server --ssl-certificate ./fullchain.pem --ssl-certificate-key ./privkey.pem --token password --redirect https://www.bing.com:443
 ```
 
 - Client
 
-```shell
+The default address is `127.0.0.1:1234`.
+
+```bash
 ./tier2pool client --server wss://example.com --pool pool.minexmr.com:4444 --token password
 ```
 

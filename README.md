@@ -8,17 +8,23 @@ A mining pool proxy tool.
 
 ## Build
 
-### Build from source
+I use Ubuntu as a demo.
 
-```bash
+```shell
+sudo update
+sudo apt install git make snapd -y
+sudo snap install --classic
 make build
+# make build_windows_amd64
+# make build_linux_amd64
+cd build && ls
 ```
 
 ## Usage
 
 - Server
 
-```bash
+```shell
 ./tier2pool server --ssl-certificate ./fullchain.pem --ssl-certificate-key ./privkey.pem --token password --redirect https://www.bing.com:443
 ```
 
@@ -26,7 +32,7 @@ make build
 
 The default address is `127.0.0.1:1234`.
 
-```bash
+```shell
 ./tier2pool client --server wss://example.com --pool pool.minexmr.com:4444 --token password
 ```
 

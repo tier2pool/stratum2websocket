@@ -25,7 +25,27 @@ jobs:
           make build_windows_amd64
       - name: Test
         run: go test -v ./...
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
-          path: ./build
+          name: tier2pool_linux_386
+          path: ./build/tier2pool_linux_386
+      - uses: actions/upload-artifact@v2
+        with:
+          name: tier2pool_linux_amd64
+          path: ./build/tier2pool_linux_amd64
+      - uses: actions/upload-artifact@v2
+        with:
+          name: tier2pool_linux_arm
+          path: ./build/tier2pool_linux_arm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: tier2pool_linux_arm64
+          path: ./build/tier2pool_linux_arm64
+      - uses: actions/upload-artifact@v2
+        with:
+          name: tier2pool_windows_386
+          path: ./build/tier2pool_windows_386.exe
+      - uses: actions/upload-artifact@v2
+        with:
+          name: tier2pool_windows_amd64
+          path: ./build/tier2pool_windows_amd64.exe

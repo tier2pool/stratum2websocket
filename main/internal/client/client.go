@@ -33,7 +33,7 @@ type client struct {
 
 func (c *client) Run() error {
 	defer logrus.Info("client has exited")
-	listener, err := net.Listen("tcp", ":1234")
+	listener, err := net.Listen("tcp", c.cmd.Flag("listen").Value.String())
 	if err != nil {
 		return err
 	}

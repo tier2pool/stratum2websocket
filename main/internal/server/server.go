@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -85,11 +86,23 @@ func (s *server) handle(c echo.Context) error {
 	defer func() {
 		logrus.Infof("client %s disable\n", c.RealIP())
 	}()
-	netConn, err := net.Dial("tcp", c.Request().Header.Get("X-Pool"))
+	var poolConn net.Conn
+	u, err := url.Parse(c.Request().Header.Get("X-Pool"))
 	if err != nil {
 		return err
 	}
-	conn := jsonrpc2.NewConn(netConn)
+	switch u.Scheme {
+	case "", "tcp":
+		poolConn, err = net.Dial("tcp", u.Host)
+	case "tls", "ssl":
+		poolConn, err = tls.Dial("tcp", u.Host, &tls.Config{})
+	default:
+		return fmt.Errorf("unsupported mining pool protocol: %s", u.Scheme)
+	}
+	if err != nil {
+		return err
+	}
+	conn := jsonrpc2.NewConn(poolConn)
 	defer func() {
 		_ = conn.Close()
 	}()

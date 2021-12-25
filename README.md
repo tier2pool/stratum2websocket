@@ -35,7 +35,11 @@ cd build && ls
 The default address is `127.0.0.1:1234`.
 
 ```shell
-./tier2pool client --server wss://example.com --pool pool.minexmr.com:4444 --token password
+# ETH
+./tier2pool client --server wss://example.com --pool tls://us1.ethermine.org:5555 --token password
+
+# XMR
+./tier2pool client --server wss://example.com --pool tcp://pool.minexmr.com:4444 --token password
 ```
 
 

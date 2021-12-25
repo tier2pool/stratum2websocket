@@ -92,7 +92,7 @@ func (s *server) handle(c echo.Context) error {
 		return err
 	}
 	switch u.Scheme {
-	case "", "tcp":
+	case "tcp":
 		poolConn, err = net.Dial("tcp", u.Host)
 	case "tls", "ssl":
 		poolConn, err = tls.Dial("tcp", u.Host, &tls.Config{})

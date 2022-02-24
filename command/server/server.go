@@ -15,27 +15,31 @@ import (
 	"net/url"
 )
 
-type Server interface {
-	Run() error
+type Server struct {
+	config     *Config
+	upgrader   websocket.Upgrader
+	httpServer *echo.Echo
 }
 
-func New(cmd *cobra.Command) Server {
-	if cmd.Flag("debug").Value.String() == "true" {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-	s := &server{
-		cmd:        cmd,
-		httpServer: echo.New(),
-	}
+func (s *Server) Run() error {
+	logrus.Infoln("server is running")
+	return s.httpServer.StartTLS(
+		s.config.Listen,
+		s.config.SSLCertificate,
+		s.config.SSLCertificateKey,
+	)
+}
+
+func (s *Server) initializeHttpServer() error {
 	s.httpServer.HideBanner = true
 	s.httpServer.HidePort = true
 	s.httpServer.HTTPErrorHandler = func(err error, c echo.Context) {
-		logrus.Error(err)
+		logrus.Errorln(err)
 		if err := c.NoContent(http.StatusServiceUnavailable); err != nil {
-			logrus.Error(err)
+			logrus.Errorln(err)
 		}
 	}
-	redirectURL, err := url.Parse(s.cmd.Flag("redirect").Value.String())
+	redirectURL, err := url.Parse(s.config.Redirect)
 	if err != nil {
 		logrus.Fatal(err)
 		return nil
@@ -43,9 +47,9 @@ func New(cmd *cobra.Command) Server {
 	s.httpServer.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
 		Skipper: func(c echo.Context) bool {
 			authorization := c.Request().Header.Get("Authorization")
-			skip := authorization == fmt.Sprintf("Basic %s", s.cmd.Flag("token").Value.String())
+			skip := authorization == fmt.Sprintf("Basic %s", s.config.Token)
 			if !skip {
-				logrus.Infof("invalid client or password error from %s", c.RealIP())
+				logrus.Infof("invalid client or password error from %s\n", c.RealIP())
 			}
 			return skip
 		},
@@ -56,25 +60,10 @@ func New(cmd *cobra.Command) Server {
 		}),
 	}))
 	s.httpServer.GET("/", s.handle)
-	return s
+	return nil
 }
 
-type server struct {
-	cmd        *cobra.Command
-	upgrader   websocket.Upgrader
-	httpServer *echo.Echo
-}
-
-func (s *server) Run() error {
-	logrus.Info("server is running")
-	return s.httpServer.StartTLS(
-		s.cmd.Flag("listen").Value.String(),
-		s.cmd.Flag("ssl-certificate").Value.String(),
-		s.cmd.Flag("ssl-certificate-key").Value.String(),
-	)
-}
-
-func (s *server) handle(c echo.Context) error {
+func (s *Server) handle(c echo.Context) error {
 	ws, err := s.upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
@@ -82,9 +71,9 @@ func (s *server) handle(c echo.Context) error {
 	defer func() {
 		_ = ws.Close()
 	}()
-	logrus.Infof("new connection from %s\n", c.RealIP())
+	logrus.Infoln("new connection from %s\n", c.RealIP())
 	defer func() {
-		logrus.Infof("client %s disable\n", c.RealIP())
+		logrus.Infoln("client %s disable\n", c.RealIP())
 	}()
 	var poolConn net.Conn
 	u, err := url.Parse(c.Request().Header.Get("X-Pool"))
@@ -109,7 +98,7 @@ func (s *server) handle(c echo.Context) error {
 	return s.forward(conn, ws)
 }
 
-func (s *server) forward(conn jsonrpc2.Conn, ws *websocket.Conn) error {
+func (s *Server) forward(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	errCh := make(chan error)
 	go func() {
 		errCh <- s.receive(conn, ws)
@@ -123,7 +112,7 @@ func (s *server) forward(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	}
 }
 
-func (s *server) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
+func (s *Server) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	for {
 		messageType, data, err := ws.ReadMessage()
 		if err != nil {
@@ -144,7 +133,7 @@ func (s *server) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	}
 }
 
-func (s *server) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
+func (s *Server) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	buffer := pool.Get()
 	defer pool.Put(buffer)
 	for {
@@ -162,4 +151,51 @@ func (s *server) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 			return err
 		}
 	}
+}
+
+type Config struct {
+	Debug             bool
+	Token             string
+	Listen            string
+	SSLCertificate    string
+	SSLCertificateKey string
+	Redirect          string
+}
+
+func NewCommand() *cobra.Command {
+	server := &Server{
+		httpServer: echo.New(),
+		config:     &Config{},
+	}
+	command := &cobra.Command{
+		Use:  "server",
+		Long: "tier2pool server",
+		Run: func(cmd *cobra.Command, args []string) {
+			if server.config.Debug {
+				logrus.SetLevel(logrus.DebugLevel)
+			}
+			if err := server.initializeHttpServer(); err != nil {
+				logrus.Fatalln(err)
+			}
+			if err := server.Run(); err != nil {
+				logrus.Fatalln(err)
+			}
+		},
+	}
+	command.Flags().BoolVar(&server.config.Debug, "debug", false, "Enable debug mode")
+	command.Flags().StringVar(&server.config.Token, "token", "", "Server access token")
+	command.Flags().StringVar(&server.config.Redirect, "redirect", "", "Redirect url for invalid requests")
+	command.Flags().StringVar(&server.config.Listen, "listen", "0.0.0.0:443", "Server listener address")
+	command.Flags().StringVar(&server.config.SSLCertificate, "ssl-certificate", "", "SSL certificate")
+	command.Flags().StringVar(&server.config.SSLCertificateKey, "ssl-certificate-key", "", "SSL certificate private key")
+	if err := command.MarkFlagRequired("token"); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := command.MarkFlagRequired("ssl-certificate"); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := command.MarkFlagRequired("ssl-certificate-key"); err != nil {
+		logrus.Fatal(err)
+	}
+	return command
 }

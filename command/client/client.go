@@ -13,32 +13,21 @@ import (
 	"net/http"
 )
 
-type Client interface {
-	Run() error
-}
-
-func New(cmd *cobra.Command) Client {
-	if cmd.Flag("debug").Value.String() == "true" {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-	return &client{
-		cmd: cmd,
-	}
-}
-
-type client struct {
-	cmd      *cobra.Command
+type Client struct {
+	config   *Config
 	listener net.Listener
 }
 
-func (c *client) Run() error {
-	defer logrus.Info("client has exited")
-	listener, err := net.Listen("tcp", c.cmd.Flag("listen").Value.String())
+func (c *Client) Run() error {
+	defer logrus.Infoln("client has exited")
+	listener, err := net.Listen("tcp", c.config.Listen)
 	if err != nil {
 		return err
 	}
-	defer listener.Close()
-	logrus.Info("client is running")
+	defer func() {
+		_ = listener.Close()
+	}()
+	logrus.Infoln("client is running")
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -53,19 +42,19 @@ func (c *client) Run() error {
 	}
 }
 
-func (c *client) handle(conn jsonrpc2.Conn) error {
+func (c *Client) handle(conn jsonrpc2.Conn) error {
 	logrus.Infof("new connection from %s\n", conn.RemoteAddr())
 	defer func() {
 		_ = conn.Close()
 		logrus.Infof("client %s disconnect\n", conn.RemoteAddr())
 	}()
-	ws, _, err := websocket.DefaultDialer.Dial(c.cmd.Flag("server").Value.String(), http.Header{
-		"Authorization": []string{fmt.Sprintf("Basic %s", c.cmd.Flag("token").Value.String())},
-		"X-Pool":        []string{c.cmd.Flag("pool").Value.String()},
+	ws, _, err := websocket.DefaultDialer.Dial(c.config.Server, http.Header{
+		"Authorization": []string{fmt.Sprintf("Basic %s", c.config.Token)},
+		"X-Pool":        []string{c.config.Pool},
 	})
 	if err != nil {
 		if errors.Is(err, websocket.ErrBadHandshake) || errors.Is(err, io.ErrUnexpectedEOF) {
-			logrus.Warn("invalid server or wrong password")
+			logrus.Warnln("invalid server or wrong password")
 			return nil
 		}
 		return err
@@ -86,7 +75,7 @@ func (c *client) handle(conn jsonrpc2.Conn) error {
 	}
 }
 
-func (c *client) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
+func (c *Client) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	buffer := pool.Get()
 	defer pool.Put(buffer)
 	for {
@@ -109,7 +98,7 @@ func (c *client) receive(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	}
 }
 
-func (c *client) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
+func (c *Client) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 	for {
 		messageType, data, err := ws.ReadMessage()
 		if err != nil {
@@ -130,4 +119,45 @@ func (c *client) send(conn jsonrpc2.Conn, ws *websocket.Conn) error {
 			return fmt.Errorf("unsupported message type %d\n", messageType)
 		}
 	}
+}
+
+type Config struct {
+	Debug  bool
+	Server string
+	Pool   string
+	Token  string
+	Listen string
+}
+
+func NewCommand() *cobra.Command {
+	client := &Client{
+		config: &Config{},
+	}
+	command := &cobra.Command{
+		Use:  "client",
+		Long: "tier2pool client",
+		Run: func(cmd *cobra.Command, args []string) {
+			if client.config.Debug {
+				logrus.SetLevel(logrus.DebugLevel)
+			}
+			if err := client.Run(); err != nil {
+				logrus.Fatalln(err)
+			}
+		},
+	}
+	command.Flags().BoolVar(&client.config.Debug, "debug", false, "enable debug mode")
+	command.Flags().StringVar(&client.config.Server, "server", "", "tier2pool server address")
+	command.Flags().StringVar(&client.config.Pool, "pool", "", "mining pool address")
+	command.Flags().StringVar(&client.config.Token, "token", "", "server access token")
+	command.Flags().StringVar(&client.config.Listen, "listen", "", "client listener address")
+	if err := command.MarkFlagRequired("pool"); err != nil {
+		logrus.Fatalln(err)
+	}
+	if err := command.MarkFlagRequired("server"); err != nil {
+		logrus.Fatalln(err)
+	}
+	if err := command.MarkFlagRequired("token"); err != nil {
+		logrus.Fatalln(err)
+	}
+	return command
 }

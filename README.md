@@ -11,9 +11,9 @@ A mining pool proxy tool, support BTC, ETH, ETC, XMR mining pool, etc.
 I use Ubuntu as a demo.
 
 ```shell
-sudo update
+sudo apt update
 sudo apt install git make snapd -y
-sudo snap install --classic
+sudo snap install go --classic
 git clone https://github.com/tier2pool/tier2pool
 cd tier2pool
 make build
@@ -55,14 +55,14 @@ The default address is `127.0.0.1:1234`.
 
 You can donate any amount to me in the Ethereum `Mainnet` or `Polygon` to support my work.
 
-```text
-0x000000A52a03835517E9d193B3c27626e1Bc96b1
+```diff
++ 0x000000A52a03835517E9d193B3c27626e1Bc96b1
 ```
 
 ### XMR
 
-```text
-84TZwzCfHhkZ43JzygNqaN5ke6t3uRSD32rofAhV19jB1VNzDnkaciWN7c7tfqFvKt95f4Y6jyEecWzsnUHi1koZNqBveJb
+```diff
++ 84TZwzCfHhkZ43JzygNqaN5ke6t3uRSD32rofAhV19jB1VNzDnkaciWN7c7tfqFvKt95f4Y6jyEecWzsnUHi1koZNqBveJb
 ```
 
 ## License

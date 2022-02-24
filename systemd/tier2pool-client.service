@@ -1,0 +1,14 @@
+[Unit]
+Description=tier2pool client service
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Restart=on-failure
+RestartSec=5s
+ExecStart=/usr/bin/tier2pool client --server wss://example.com --pool tls://us1.ethermine.org:5555 --token password
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

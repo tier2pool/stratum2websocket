@@ -71,9 +71,9 @@ func (s *Server) handle(c echo.Context) error {
 	defer func() {
 		_ = ws.Close()
 	}()
-	logrus.Infoln("new connection from %s\n", c.RealIP())
+	logrus.Infof("new connection from %s\n", c.RealIP())
 	defer func() {
-		logrus.Infoln("client %s disable\n", c.RealIP())
+		logrus.Infof("client %s disable\n", c.RealIP())
 	}()
 	var poolConn net.Conn
 	u, err := url.Parse(c.Request().Header.Get("X-Pool"))

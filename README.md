@@ -8,11 +8,10 @@ A mining pool proxy tool, support BTC, ETH, ETC, XMR mining pool, etc.
 
 ## Build
 
-I use Ubuntu as a demo.
-
 ```shell
+# Ubuntu or Debian
 sudo apt update
-sudo apt install git make snapd -y
+sudo apt install git build-essential snapd -y
 sudo snap install go --classic
 git clone https://github.com/tier2pool/tier2pool
 cd tier2pool
@@ -24,24 +23,54 @@ cd build && ls
 
 ## Usage
 
-- Server
+### Screen
 
 ```shell
-./tier2pool server --ssl-certificate ./fullchain.pem --ssl-certificate-key ./privkey.pem --token password --redirect https://www.bing.com:443
-```
+# Linux
+./build/tier2pool --help
 
-- Client
+# Server
+screen -S tier2pool-server
+./build/tier2pool server --ssl-certificate ./fullchain.pem --ssl-certificate-key ./privkey.pem --token password --redirect https://www.bing.com:443
 
-The default address is `127.0.0.1:1234`.
-
-```shell
+# Client
+screen -S tier2pool-client
 # ETH
-./tier2pool client --server wss://example.com --pool tls://us1.ethermine.org:5555 --token password
-
+./build/tier2pool client --server wss://example.com --pool tls://us1.ethermine.org:5555 --token password
 # XMR
-./tier2pool client --server wss://example.com --pool tcp://pool.minexmr.com:4444 --token password
+./build/tier2pool client --server wss://example.com --pool tcp://pool.minexmr.com:4444 --token password
 ```
 
+The client is listening on `127.0.0.1:1234` by default.
+
+### Docker
+
+```shell
+make build_image
+
+# Server
+docker run \
+  --name tier2pool-server \
+  -p 443:443 \
+  --restart=on-failure:3 \
+  -dit tier2pool/tier2pool:latest \
+  server \
+  --ssl-certificate ./fullchain.pem \
+  --ssl-certificate-key ./privkey.pem \
+  --token password \
+  --redirect https://www.bing.com:443
+  
+# Client
+docker run \
+  --name tier2pool-client \
+  -p 1234:1234 \
+  --restart=on-failure:3 \
+  -dit tier2pool/tier2pool:latest \
+  client \
+  --server wss://example.com \
+  --pool tls://us1.ethermine.org:5555 \
+  --token password
+```
 
 ## TODO
 
@@ -53,7 +82,7 @@ The default address is `127.0.0.1:1234`.
 
 ### ETH
 
-You can donate any amount to me in the Ethereum `Mainnet` or `Polygon` to support my work.
+You can donate any amount to me in the Ethereum `Mainnet`, `Polygon` or `BEP20` to support my work.
 
 ```diff
 + 0x000000A52a03835517E9d193B3c27626e1Bc96b1

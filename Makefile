@@ -20,5 +20,8 @@ build_windows_386:
 build_windows_amd64:
 	GOOS=windows GOARCH=amd64 go build -o ./build/tier2pool_windows_amd64.exe ./command/main.go
 
+build_image:
+	docker build -t tier2pool/tier2pool:v0.1.0 -t tier2pool/tier2pool:latest .
+
 clear:
 	rm -rf ./build

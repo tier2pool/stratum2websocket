@@ -25,6 +25,8 @@ cd build && ls
 
 ### Screen
 
+The client is listening on `127.0.0.1:1234` by default.
+
 ```shell
 # Linux
 ./build/tier2pool --help
@@ -41,7 +43,11 @@ screen -S tier2pool-client
 ./build/tier2pool client --server wss://example.com --pool tcp://pool.minexmr.com:4444 --token password
 ```
 
-The client is listening on `127.0.0.1:1234` by default.
+In addition, you can use the `--allowed-pool` parameter to limit the available mining pools.
+
+```shell
+./build/tier2pool server --allowed-pool tls://us1.ethermine.org:5555 --allowed tcp://pool.minexmr.com:4444 ...
+```
 
 ### Docker
 

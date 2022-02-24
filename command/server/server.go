@@ -80,6 +80,19 @@ func (s *Server) handle(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(s.config.AllowedPools) != 0 {
+		allowed := false
+		for _, allowedPool := range s.config.AllowedPools {
+			if allowedPool == c.Request().Header.Get("X-Pool") {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			logrus.Infof("rejected a request that wasn't in the allowed pool list: %s", c.Request().Header.Get("X-Pool"))
+			return nil
+		}
+	}
 	switch u.Scheme {
 	case "tcp":
 		poolConn, err = net.Dial("tcp", u.Host)
@@ -160,6 +173,7 @@ type Config struct {
 	SSLCertificate    string
 	SSLCertificateKey string
 	Redirect          string
+	AllowedPools      []string
 }
 
 func NewCommand() *cobra.Command {
@@ -188,6 +202,7 @@ func NewCommand() *cobra.Command {
 	command.Flags().StringVar(&server.config.Listen, "listen", "0.0.0.0:443", "Server listener address")
 	command.Flags().StringVar(&server.config.SSLCertificate, "ssl-certificate", "", "SSL certificate")
 	command.Flags().StringVar(&server.config.SSLCertificateKey, "ssl-certificate-key", "", "SSL certificate private key")
+	command.Flags().StringArrayVar(&server.config.AllowedPools, "allowed-pool", []string{}, "")
 	if err := command.MarkFlagRequired("token"); err != nil {
 		logrus.Fatal(err)
 	}
